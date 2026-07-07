@@ -17,6 +17,9 @@ import google.generativeai as genai
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 app = FastAPI()
+@app.get("/")
+def root():
+    return {"status": "Suyog Plus backend is running"}
 OTP_STORE = {}
 USER_SESSIONS = {} 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
