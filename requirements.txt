@@ -3,4 +3,3 @@ pydantic
 uvicorn
 google-genai
 requests
-
