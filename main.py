@@ -1,15 +1,17 @@
 import os
 import json
-import smtplib
 import random
-from email.mime.text import MIMEText
+import csv
+import requests  # Added for Resend API
 from fastapi import FastAPI
 from pydantic import BaseModel
-import csv
 from google.oauth2 import service_account
-import google.generativeai as genai
+from google import genai  # Updated Gemini import
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Updated Gemini client initialization
+# (This automatically reads the GEMINI_API_KEY from your environment variables)
+client = genai.Client()
+
 app = FastAPI()
 
 @app.get("/")
@@ -27,21 +29,34 @@ class ChatPayload(BaseModel):
 
 def send_real_email(target_email: str, otp_code: str):
     try:
-        msg = MIMEText(f"Your verification code is: {otp_code}")
-        msg["Subject"] = "Your Suyog+ Verification Code"
-        msg["From"] = os.getenv("GMAIL_USER")
-        msg["To"] = target_email
-
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls()
-            server.login(os.getenv("GMAIL_USER"), os.getenv("GMAIL_APP_PASSWORD"))
-            server.sendmail(os.getenv("GMAIL_USER"), target_email, msg.as_string())
-        return True
+        resend_api_key = os.getenv("RESEND_API_KEY")
+        
+        # Send via normal HTTP web traffic which Railway allows
+        url = "https://api.resend.com/emails"
+        headers = {
+            "Authorization": f"Bearer {resend_api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "from": "onboarding@resend.dev",  # Resend provides this domain for free testing
+            "to": target_email,
+            "subject": "Your Suyog+ Verification Code",
+            "html": f"<p>Your verification code is: <strong>{otp_code}</strong></p>"
+        }
+        
+        response = requests.post(url, headers=headers, json=payload)
+        
+        if response.status_code in [200, 201]:
+            return True
+        else:
+            print(f"EMAIL ERROR: {response.text}")
+            return False
+            
     except Exception as e:
         print(f"EMAIL ERROR: {e}")
         return False
 
-# ... (Keep your existing find_top_jobs function here) ...
+# ... (You can keep your existing find_top_jobs function here) ...
 
 @app.post("/api/chat")
 def chat_endpoint(payload: ChatPayload):
@@ -66,9 +81,13 @@ def chat_endpoint(payload: ChatPayload):
 
     elif step == "get_intro":
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            # Updated to use the new client syntax and recommended gemini-2.5-flash model
             prompt = f"Extract Name and Department from: '{msg_orig}'. Reply exactly: NAME: [name] | DEPT: [department]"
-            response = model.generate_content(prompt)
+            
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt,
+            )
             reply = response.text.strip()
 
             name, dept = "User", "Unknown"
