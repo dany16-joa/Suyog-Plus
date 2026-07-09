@@ -10,7 +10,7 @@ from google import genai  # Updated Gemini import
 
 # Updated Gemini client initialization
 # (This automatically reads the GEMINI_API_KEY from your environment variables)
-client = genai.Client()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 app = FastAPI()
 
