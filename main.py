@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from google.oauth2 import service_account
 from google import genai  # Updated Gemini import
+
 # Updated Gemini client initialization
 # (This automatically reads the GEMINI_API_KEY from your environment variables)
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
